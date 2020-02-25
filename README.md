@@ -1,9 +1,9 @@
-# FightMe
+# :punch: FightMe
 A simple web game using Vue.js.
 -
 ![alt text](https://raw.githubusercontent.com/arakilian0/fightme/master/screenshot.png "Fight Me Use Case")
 
-**All the code is in one file. The `index.html` file.**
+**All the code is in one file. The [index.html](https://github.com/arakilian0/fightme/blob/master/index.html) file.**
 
 ## License
 MIT License
