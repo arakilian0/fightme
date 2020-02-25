@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fight Me by arakilian0</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+</head>
+<body>
+
+  <div id="app">
+  <div class="intro">
+    <h1>{{ game.title }}</h1>
+    <span>{{ game.subtitle }}</span>
+    <input type="text" v-model="game.users.client.name">
+  </div>
+  
+  <template v-if="game.users.client.name">
+    <div class="user-displays">
+      <div class="user">
+        <div>{{ game.users.client.name }}</div>
+        <div class="healthbar" 
+             :style="[game.users.client.health.style, 
+                     {width: `${game.users.client.health.start}%`}]">
+          {{ game.users.client.health.start }} %
+        </div>
+      </div>
+      <div class="user">
+        <div>{{ game.users.server.name }}</div>
+        <div class="healthbar" 
+             :style="[game.users.server.health.style, 
+                     {width: `${game.users.server.health.start}%`}]">
+          {{ game.users.server.health.start }} %
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <template v-if="!game.active">
+        <button @click="startGame">Start Game</button>
+      </template>
+      <template v-else>
+        <button @click="gameControl('attack')">Attack</button>
+        <button @click="gameControl('special')">Special Attack</button>
+        <button @click="gameControl('heal')">Heal</button>
+        <button @click="endGame">Restart</button>
+        <button @click="leaveGame">Exit</button>
+      </template>
+      <template v-if="game.log.store.length >= 1">
+        <ul class="log">
+          <div>{{ game.log.title }}</div>
+          <li v-for="log in game.log.store">
+            <span v-if="log.isClient" :style="game.users.client.health.style">{{ log.msg }}</span>
+            <span v-else-if="log.isServer" :style="game.users.server.health.style">{{ log.msg }}</span>
+            <span v-else>{{ log.msg }}</span>
+          </li>
+        </ul>
+      </template>
+    </div>
+  </template>
+  <template v-if="game.users.client.victory || game.users.server.victory">
+    <aside>
+      <div class="modal">
+        <strong v-if="game.users.client.victory">Congratulations...You won!!!!</strong>
+        <strong v-else>Better luck next time 
+          <span class="username">{{ game.users.client.name }}</span>
+        </strong>
+        <div>
+          <button @click="endGame">Restart</button>
+          <button @click="leaveGame">Exit</button>
+        </div>
+      </div>
+    </aside>
+  </template>
+</div>
+
+<script>
+new Vue({
+  el: '#app',
+  data: {
+    game: {
+      title: 'Fight Me Bruh',
+      subtitle: 'Enter a username to start fighting:',
+      active: false,
+      users: {
+        client: {
+          name: '',
+          victory: false,
+          health: {
+            start: 100,
+            powerup: { min: 5, max: 10 },
+            style: { background: 'lime', color: 'black' }
+          },
+          damage: {
+            default: { min: 3, max: 9 },
+            special: { min: 9, max: 15 }
+          }
+        },
+        server: {
+          name: 'Bot Mike',
+          victory: false,
+          health: {
+            start: 100, 
+            powerup: { min: 3, max: 7 },
+            style: { background: 'orange' }
+          },
+          damage: {
+            default: { min: 4, max: 10 },
+            special: { min: 10,max: 17 }
+          }
+        }
+      }, 
+      log: {
+        title: 'Game Log',
+        store: []
+      }
+    }
+  },
+  watch: {
+    'game.users.server.health.start': function(val) {
+      if(val <= 0) {
+        this.game.users.client.victory = true;
+      }
+    },
+    'game.users.client.health.start': function(val) {
+      if(val <= 0) {
+        this.game.users.server.victory = true;
+      }
+    }
+  },
+  methods: {
+    startGame: function() {
+      this.game.active = true;
+    }, 
+    endGame: function() {
+      this.game.active = false;
+      this.game.log.store = [];
+      this.game.users.client.victory = false;
+      this.game.users.server.victory = false;
+      this.game.users.client.health.start = 100;
+      this.game.users.server.health.start = 100;
+    },
+    leaveGame: function() { this.endGame(); this.game.users.client.name = '' },
+    randonNumber: function(min, max) { return Math.round(Math.random() * (max++ - min) + min) },
+    gameControl: function(action) {
+      switch(action) {
+        case 'attack': this.actionControl('attack'); break;
+        case 'special': this.actionControl('special'); break;
+        case 'heal': this.actionControl('heal'); break;
+        default: break;
+      }
+    },
+    actionControl: function(action) {
+      switch(action) {
+        case 'attack':
+          let clientAttackDamage = this.randonNumber(
+            this.game.users.client.damage.default.min, 
+            this.game.users.client.damage.default.max
+          );
+          let serverAttackDamage = this.randonNumber(
+            this.game.users.server.damage.default.min, 
+            this.game.users.server.damage.default.max
+          );
+          this.game.users.server.health.start -= clientAttackDamage; 
+          this.game.log.store.unshift({
+            isClient: true,
+            msg: `
+                  ${this.game.users.server.name} ATTACKED: damaged 
+                  ${this.game.users.client.name} for ${serverAttackDamage}%
+                 `
+          });
+          this.game.users.client.health.start -= serverAttackDamage; 
+          this.game.log.store.unshift({
+            isServer: true, 
+            msg: `
+                  ${this.game.users.client.name} ATTACKED: damaged 
+                  ${this.game.users.server.name} for ${clientAttackDamage}%
+                 `
+          });
+          break;
+        case 'special':
+          let clientSpecialAttackDamage = this.randonNumber(
+            this.game.users.client.damage.special.min, 
+            this.game.users.client.damage.special.max
+          );
+          let serverSpecialAttackDamage = this.randonNumber(
+            this.game.users.server.damage.special.min, 
+            this.game.users.server.damage.special.max
+          );
+          this.game.users.server.health.start -= clientSpecialAttackDamage; 
+          this.game.log.store.unshift({
+            isClient: true,
+            msg: `
+                  ${this.game.users.server.name} SPECIAL ATTACKED: damaged 
+                  ${this.game.users.client.name} for ${serverSpecialAttackDamage}%
+                 `
+          });
+          this.game.users.client.health.start -= serverSpecialAttackDamage; 
+          this.game.log.store.unshift({
+            isServer: true, 
+            msg: `
+                  ${this.game.users.client.name} SPECIAL ATTACKED: damaged 
+                  ${this.game.users.server.name} for ${clientSpecialAttackDamage}%
+                 `
+          });
+          break;
+        case 'heal':
+          let clientHealer = this.randonNumber(
+            this.game.users.client.health.powerup.min, 
+            this.game.users.client.health.powerup.max
+          );
+          let serverHealer = this.randonNumber(
+            this.game.users.server.health.powerup.min, 
+            this.game.users.server.health.powerup.max
+          );
+          if(this.game.users.client.health.start <= 90) {
+            this.game.users.client.health.start -= clientHealer; 
+            this.game.log.store.unshift({
+              isClient: true, 
+              msg: `
+                  ${this.game.users.client.name} HEALED: recovered ${clientHealer}%
+                 `
+             });
+          }
+          if(this.game.users.server.health.start <= 90) {
+            this.game.users.server.health.start -= serverHealer; 
+            this.game.log.store.unshift({
+              isServer: true, 
+              msg: `
+                  ${this.game.users.server.name} HEALED: recovered ${serverHealer}%
+                 `
+             });
+          }
+          break;
+        default: break;
+      }
+    }
+  }
+});
+</script>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-align: center;
+}
+.intro{
+  background: #121212;
+  color: #eee;
+  padding: 40px;
+  font-size: 20px;
+}
+  .intro h1 {
+    padding-bottom: 18px;
+    color: yellow;
+  }
+  .intro span {
+    font-size: 22px;
+    font-weight: bold;
+    font-family: 'Arial';
+  }
+  .intro input {
+    font-size: 22px;
+    font-family: 'Arial';
+  }
+.user-displays {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+  .user-displays .user {
+    margin: 20px 50px;
+    width: 100%;
+    font-size: 28px;
+    text-transform: capitalize;
+  }
+    .user-displays .user .healthbar {
+      background: lime;
+      margin-top: 20px;
+      font-size: 16px;
+      width: 100%;
+      padding: 10px;
+    }
+
+.controls {
+  margin: 20px 50px;
+  padding: 18px;
+}
+  .controls button {
+    background: yellow;
+    padding: 10px 20px;
+    border: 0;
+    font-weight: bold;
+    font-size: 20px;
+  }
+  .controls button:hover {
+    cursor: pointer;
+  }
+
+.log {
+  display: block;
+  background: lightgray;
+  margin: 50px -20px;
+  padding: 10px;
+  list-style-type: none;
+}
+  .log div {
+    background: gray;
+    font-size: 22px;
+    font-weight: bold;
+  }
+  .log li {
+    font-size: 18px;
+    background: white;
+    text-transform: capitalize;
+  }
+
+aside {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+  aside .modal {
+    background: #121212;
+    padding: 40px;
+    min-width: 200px;
+    min-height: 200px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+  }
+    aside .modal strong {
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+    aside .modal button {
+      background: yellow;
+      padding: 10px 20px;
+      border: 0;
+      font-weight: bold;
+      font-size: 20px;
+      margin: 0 10px;
+    }
+    aside .modal button:hover {
+      cursor: pointer;
+    }
+.username {
+  text-transform: uppercase;
+  color: lightgray;
+}
+</style>
+
+</body>
+</html>
