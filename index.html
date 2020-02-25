@@ -213,7 +213,7 @@ new Vue({
             this.game.users.server.health.powerup.max
           );
           if(this.game.users.client.health.start <= 90) {
-            this.game.users.client.health.start -= clientHealer; 
+            this.game.users.client.health.start += clientHealer; 
             this.game.log.store.unshift({
               isClient: true, 
               msg: `
@@ -222,7 +222,7 @@ new Vue({
              });
           }
           if(this.game.users.server.health.start <= 90) {
-            this.game.users.server.health.start -= serverHealer; 
+            this.game.users.server.health.start += serverHealer; 
             this.game.log.store.unshift({
               isServer: true, 
               msg: `
